@@ -169,16 +169,8 @@ FLASK_SECRET_KEY=your_flask_secret_key
    ```
 
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-[Specify your chosen license here]
-
 ## Contact
 
-[Your Name] - [Your Email]
+Miro Laukkanen - miro.laukkanen44@gmail.com
 
-Project Link: [https://github.com/yourusername/your-repo-name](https://github.com/yourusername/your-repo-name)
+

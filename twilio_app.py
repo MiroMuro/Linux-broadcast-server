@@ -5,7 +5,10 @@ from twilio.twiml.messaging_response import MessagingResponse
 from dotenv import load_dotenv
 import subprocess
 import time
-
+import threading
+import sys
+import requests
+from currentsong import get_current_playing_song
 #Load environment variables
 load_dotenv()
 
@@ -32,6 +35,12 @@ def control_broadcast_with_sms(sms_command):
             return get_icecast2_service_status()
         elif sms_command == "info_commands_stream":
             return f"Stream can be started with 'begin_stream'. Stream can be stopped with 'end_stream'. Stream status can be viewed with 'status_stream'."
+        elif sms_command == "restart_stream":
+             return restart_icecast2_broadcast()
+        elif sms_command == "current_song_stream":
+             return get_current_icecast2_song()
+        elif sms_command == "skip_current_song_stream":
+             return stream_skip_current_song()
         else:
             return f"Invalid actions! Use 'begin_stream', 'end_stream' or 'status_stream'"
     except subprocess.CalledProcessError as e:
@@ -55,14 +64,33 @@ def stop_icecast2_broadcast():
 def get_icecast2_service_status():
     try:
         result = subprocess.run(["sudo","systemctl","status","icecast2.service"],
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output = result.stdout.decode('utf-8').strip()
         for line in output.splitlines():
             if "Active" in line:
                 return f"Icecast2 server is {line.strip()}"
     except subprocess.CalledProcessError as e:
-        return f"Failed to get Icecast2 service status: {e.stderr.decode('utf-8').strip()}"
+        return f"Failed to get Icecast2 service status: {e}"
 
+def restart_icecast2_broadcast():
+    subprocess.run(["sudo","systemctl","restart","icecast2"],check=True)
+    subprocess.run(["killall","ices2"])
+    subprocess.run(["ices2","/etc/ices2.xml"], check=True)
+    return "icecast2 server has been restarted"
+
+def stream_skip_current_song():
+    subprocess.run(["sudo","killall","-HUP","ices2"],check=True)
+    return "Skipping current song... just wait a second"
+
+def get_current_icecast2_song():
+    current_song = get_current_playing_song()
+    print(f"Now playing: {current_song}")
+
+def add_song_to_stream(sms_command):
+    split_command_and_url = sms_command.split()
+    youtube_song_url = split_command_and_url[1]
+    subprocess.run(["./download_audio.sh", youtube_song_url],check=True)
+    return f("Song added to playlist. Please restart the broadcast with 'restart_stream'! ")
 
 @app.route("/sms", methods=["POST"])
 def incoming_sms():
@@ -70,20 +98,20 @@ def incoming_sms():
 	#Get the message body and senders number
 	body = request.values.get("Body","").lower().strip()
 	from_number = request.values.get("From","")
-	
-	#Check if the sender is Authorized
+
 	if from_number != user_phone_number:
 		response = "Unauthorized phone number"
+        if body in ["begin_stream", "end_stream", "status_stream", "info_commands_stream","stream_restart","stream_current_song","stream_skip_song"]:
+            response = control_broadcast_with_sms(body)
+        elif "add_song_to_stream" in body
+            response = add_song_to_stream(body)
 	else:
-	#Process the command.
-		response = control_broadcast_with_sms(body)
+		response = "Invalid input. Please try again."
 
-			
 	#Send the response back to the user
 	twiml_response = MessagingResponse()
 	twiml_response.message(response)
 	return str(twiml_response)
 
 if __name__ == "__main__":
-	app.run(host="0.0.0.0", port=5000, debug=True)
-	print(get_icecast2_service_status())	
+	app.run(host="0.0.0.0", port=5000, debug=True)	

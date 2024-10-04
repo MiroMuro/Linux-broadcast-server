@@ -41,14 +41,14 @@ def control_broadcast_with_sms(sms_command):
             return get_icecast2_service_status()
         elif sms_command == "info_commands_stream":
             return f"Stream can be started with 'begin_stream'. Stream can be stopped with 'end_stream'. Stream status can be viewed with 'status_stream'."
-        elif sms_command == "stream_restart":
+        elif sms_command == "restart_stream":
              return restart_icecast2_broadcast()
-        elif sms_command == "stream_current_song":
+        elif sms_command == "current_song_stream":
              return get_current_icecast2_song()
-        elif sms_command == "stream_skip_song":
+        elif sms_command == "skip_current_song_stream":
              return stream_skip_current_song()
         else:
-            return f"Invalid actions! Use 'begin_stream', 'end_stream' or 'status_stream'"
+            return f"Invalid actions! Use 'info_stream' to see available actions"
     except subprocess.CalledProcessError as e:
         return f"Error controlling Icecast2 server: {e}"
 
@@ -70,6 +70,7 @@ def stop_icecast2_broadcast():
 
 def restart_icecast2_broadcast():
     subprocess.run(["sudo","systemctl","restart","icecast2"],check=True)
+    subprocess.run(["killall","ices2"])
     subprocess.run(["ices2","/etc/ices2.xml"], check=True)
     return "Icecast2 server has been restarted"
 
@@ -88,10 +89,10 @@ def add_song_to_stream(sms_command):
      split_command = sms_command.split()
      youtube_song_url = split_command[1]
      subprocess.run(["./download_audio.sh", youtube_song_url],check=True)
-     return f"Song added to stream playlist."
+     return f("Song added to playlist. Please restart the stream with 'stream_restart'! ")
 
 def stream_skip_current_song():
-    subprocess.run(["sudo","killall","-HUP","ices2"])
+    subprocess.run(["sudo","killall","-HUP","ices2"],check=True)
     return "Skipping current song... Just wait a second."
 
 def get_current_icecast2_song():
@@ -115,7 +116,6 @@ if __name__ == "__main__":
         elif 'add_song_to_stream' in action:
             response = add_song_to_stream(action)
             print(response)
-            restart_icecast2_broadcast()
         else:
             print("Invalid input. Please try again")
 

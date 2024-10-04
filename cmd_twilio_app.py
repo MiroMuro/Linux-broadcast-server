@@ -8,6 +8,7 @@ import time
 import threading
 import sys
 import requests
+from currentsong import get_current_playing_song
 
 #Load environment variables
 load_dotenv()
@@ -29,21 +30,6 @@ app = Flask(__name__)
 def run_flask_app():
     app.run(host="0.0.0.0", port=5000, threaded=True)
 
-# Route to trigger shutdown of Flask server
-@app.route('/shutdown', methods=['GET'])
-def shutdown():
-    shutdown_func = request.environ.get('werkzeug.server.shutdown')
-    if shutdown_func is None:
-       raise RuntimeError("Not running with the Werkzeug Server")
-    shutdown_func()
-    return "Server shutting down..."
-
-def stop_flask():
-    try:
-        # Send a shutdown request to the Flask server to stop it
-        requests.get('http://127.0.0.1:5000/shutdown')
-    except Exception as e:
-        print(f"Error while trying to stop the Flask server: {e}")
 
 def control_broadcast_with_sms(sms_command):
     try:
@@ -57,6 +43,10 @@ def control_broadcast_with_sms(sms_command):
             return f"Stream can be started with 'begin_stream'. Stream can be stopped with 'end_stream'. Stream status can be viewed with 'status_stream'."
         elif sms_command == "stream_restart":
              return restart_icecast2_broadcast()
+        elif sms_command == "stream_current_song":
+             return get_current_icecast2_song()
+        elif sms_command == "stream_skip_song":
+             return stream_skip_current_song()
         else:
             return f"Invalid actions! Use 'begin_stream', 'end_stream' or 'status_stream'"
     except subprocess.CalledProcessError as e:
@@ -75,6 +65,7 @@ def get_wsl_ip_of_broadcast():
 
 def stop_icecast2_broadcast():
     subprocess.run(["sudo","systemctl","stop","icecast2"], check=True)
+    subprocess.run(["killall","ices2"])
     return "Icecast2 server stopped"
 
 def restart_icecast2_broadcast():
@@ -85,7 +76,7 @@ def restart_icecast2_broadcast():
 def get_icecast2_service_status():
     try:
         result = subprocess.run(["sudo","systemctl","status","icecast2.service"],
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output = result.stdout.decode('utf-8').strip()
         for line in output.splitlines():
             if "Active" in line:
@@ -98,43 +89,27 @@ def add_song_to_stream(sms_command):
      youtube_song_url = split_command[1]
      subprocess.run(["./download_audio.sh", youtube_song_url],check=True)
      return f"Song added to stream playlist."
-"""
-@app.route("/sms", methods=["POST"])
-def incoming_sms():
-	#Handle incoming SMS messages
-	#Get the message body and senders number
-	body = request.values.get("Body","").lower().strip()
-	from_number = request.values.get("From","")
-	
-	#Check if the sender is Authorized
-	if from_number != user_phone_number:
-		response = "Unauthorized phone number"
-	else:
-	#Process the command.
-		response = control_broadcast_with_sms(body)
 
-			
-	#Send the response back to the user
-	twiml_response = MessagingResponse()
-	twiml_response.message(response)
-	return str(twiml_response)
-"""
+def stream_skip_current_song():
+    subprocess.run(["sudo","killall","-HUP","ices2"])
+    return "Skipping current song... Just wait a second."
+
+def get_current_icecast2_song():
+    current_song = get_current_playing_song()
+    print(f"Now playing: {current_song}")
+
 if __name__ == "__main__":
     # Run Flask app in a separate thread
     flask_thread = threading.Thread(target=run_flask_app)
     flask_thread.daemon = True  # Allows the thread to exit when the main program exits
     flask_thread.start()
-
+    time.sleep(1)
     # Command-line input loop
-    while True:
-        sys.stdout.flush()
+    while True:     
         action = input("Enter command: ")
-          # Ensure the input prompt is printed immediately
-        if action == 'quit':
-            print("Shutting down...")
-            stop_flask()
-            break
-        elif action in ["begin_stream", "end_stream", "status_stream", "info_commands_stream","stream_restart"]:
+        sys.stdout.flush()       
+   # Ensure the input prompt is printed immediately
+        if action in ["begin_stream", "end_stream", "status_stream", "info_commands_stream","stream_restart","stream_current_song","stream_skip_song"]:
             response = control_broadcast_with_sms(action)
             print(response)
         elif 'add_song_to_stream' in action:

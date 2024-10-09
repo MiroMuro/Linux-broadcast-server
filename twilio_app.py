@@ -22,6 +22,8 @@ user_phone_number=os.getenv("USER_PHONE_NUMBER")
 #Initialize Twilio client
 twilio_client = Client(account_ssid ,auth_token)
 
+commands = ["begin_stream", "end_stream", "status_stream", "info_commands_stream","restart_stream","current_song_stream","skip_current_song_stream"]
+
 #Initialize flask app
 app = Flask(__name__)
 
@@ -85,18 +87,11 @@ def get_current_icecast2_song():
     current_song = get_current_playing_song()
     return f"Now playing: {current_song}"
 
-def add_song_to_stream(sms_command):
-    print("adding Song to stream")
-    split_command_and_url = sms_command.split()
-    youtube_song_url = split_command_and_url[1]
-    subprocess.run(["./download_audio.sh", youtube_song_url],check=True)
-    return f("Song added to playlist. Please restart the broadcast with 'restart_stream'! ")
-
 def get_stream_info_commands():
-    commands_info = f"""Stream can be started with 'begin_stream'. Stream can be stopped with 'end_stream'.
-    Stream status can be viewed with 'status_stream'. Stream can be restarted with 'restart_stream'. 
-    Current song of stream can be displayed with 'current_song_stream'. Current song in stream can be skipped with
-    'current_song_stream' A new song to the stream can be appended with 'add_song_to_stream youtube-link-to-song' """
+    commands_info = (f"Stream can be started with 'begin_stream'. Stream can be stopped with 'end_stream'\n"
+   f"Stream status can be viewed with 'status_stream'. Stream can be restarted with 'restart_stream'. \n"
+   f"Current song of stream can be displayed with 'current_song_stream'. Current song in stream can be skipped with\n"
+   f"'current_song_stream'")
     return commands_info
 
 @app.route("/sms", methods=["POST"])
@@ -105,26 +100,19 @@ def incoming_sms():
 	#Get the message body and senders number
 	body = request.values.get("Body","").lower().strip()
 	from_number = request.values.get("From","")
-	response = "An error occurred while processing your request."
 	print("message body: ",body)
 
 	if from_number != user_phone_number:
 		response = "Unauthorized phone number"
-	if body in ["begin_stream", "end_stream", "status_stream", "info_commands_stream","restart_stream","current_song_stream","skip_current_song_stream"]:
+	if body in commands:
 		response = control_broadcast_with_sms(body)
 	else:
 		response = "Invalid command! Use 'info_commands_stream' to get list of current available commands."
-	print("The response", response)
+	print("The response: ", response)
 	#Send the response back to the user
-	try:
-		twiml_response = MessagingResponse()
-		print("Twiml res",twiml_response)
-		twiml_response.message(response)
-		return str(twiml_response)
-	except Exception as e:
-		print(f"error creating TWiml response: {str(e)}")
-		twiml_error = MessagingResponse()
-		twiml_error.message("Error creating response")
-		return str(twiml_error)
+	twiml_response = MessagingResponse()
+	twiml_response.message(response)
+	return str(twiml_response)
+
 if __name__ == "__main__":
 	app.run(host="0.0.0.0", port=5000, debug=True)	

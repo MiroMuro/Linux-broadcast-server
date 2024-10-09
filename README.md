@@ -167,7 +167,8 @@ ngrok http 5000
 4. Grab the ngrok-generated ip address
 ![kuva](https://github.com/user-attachments/assets/a8f89d77-dc4e-4263-b4e2-a2530fb52910)
 5. Add the ngrok-generated ip address to your phone that you got from twilio. This can be done on twilios website after logging in. Dont forget to the /sms endpoint at the end.
-![kuva](https://github.com/user-attachments/assets/73841508-03a7-4c31-9997-64fed4081d49)
+![kuva](https://github.com/user-attachments/assets/fd5780ab-2fa0-4f62-8186-96755f328b54)
+
 6. The app is running! Text your twilio phone number "info_commands_stream" to get the available commands.
 ![Screenshot_20241009-161643](https://github.com/user-attachments/assets/d7062f8b-3efe-46af-a72c-f0d25e1e086d)
 7. After texting "begin_stream" the sites shows up at http://your-wsl2-ip-address:8000

@@ -1,7 +1,4 @@
 import os
-from flask import Flask, request
-from twilio.rest import Client
-from twilio.twiml.messaging_response import MessagingResponse
 from dotenv import load_dotenv
 import subprocess
 import time
@@ -13,68 +10,50 @@ from currentsong import get_current_playing_song
 #Load environment variables
 load_dotenv()
 
-#Twilio credentials
-account_ssid=os.getenv('TWILIO_ACC_SID')
-auth_token=os.getenv('TWILIO_AUTH_TOKEN')
-twilio_phone_number=os.getenv('TWILIO_PHONE_NUMBER')
-user_phone_number=os.getenv("USER_PHONE_NUMBER")
+commands = ["begin_stream","end_stream", "status_stream", "info_commands_stream","restart_stream","current_song_stream","skip_current_song_stream"]
 
-
-#Initialize Twilio client
-twilio_client = Client(account_ssid ,auth_token)
-
-#Initialize flask app
-app = Flask(__name__)
-
-
-def run_flask_app():
-    app.run(host="0.0.0.0", port=5000, threaded=True)
-
-
-def control_broadcast_with_sms(sms_command):
+def control_broadcast(command):
     try:
-        if sms_command == "begin_stream":
-            return start_icecast2_broadcast()
-        elif sms_command == "end_stream":
-            return stop_icecast2_broadcast()
-        elif sms_command == "status_stream":
-            return get_icecast2_service_status()
-        elif sms_command == "info_commands_stream":
-            return f"Stream can be started with 'begin_stream'. Stream can be stopped with 'end_stream'. Stream status can be viewed with 'status_stream'."
-        elif sms_command == "restart_stream":
-             return restart_icecast2_broadcast()
-        elif sms_command == "current_song_stream":
-             return get_current_icecast2_song()
-        elif sms_command == "skip_current_song_stream":
-             return stream_skip_current_song()
-        else:
-            return f"Invalid actions! Use 'info_stream' to see available actions"
+        if command == "begin_stream":
+            return start_stream()
+        elif command == "end_stream":
+            return stop_stream()
+        elif command == "status_stream":
+            return get_status_stream()
+        elif command == "info_commands_stream":
+            return get_info_commands_stream()
+        elif command == "restart_stream":
+             return restart_stream()
+        elif command == "current_song_stream":
+             return get_current_song_stream()
+        elif command == "skip_current_song_stream":
+             return skip_current_song_stream()
     except subprocess.CalledProcessError as e:
         return f"Error controlling Icecast2 server: {e}"
 
-def start_icecast2_broadcast():
+def start_stream():
     subprocess.run(["sudo","systemctl","start","icecast2"], check=True)
     subprocess.run(["ices2","/etc/ices2.xml"], check=True)
-    broadcast_ip_address = get_wsl_ip_of_broadcast()
+    broadcast_ip_address = get_wsl_ip_of_stream()
     return f"Icecast2 server started on http://{broadcast_ip_address}:8000"
 
-def get_wsl_ip_of_broadcast():
+def get_wsl_ip_of_stream():
     result = subprocess.run(['./get_wsl_ip.sh'],stdout=subprocess.PIPE)
     ip_address = result.stdout.decode('utf-8').strip()
     return ip_address
 
-def stop_icecast2_broadcast():
+def stop_stream():
     subprocess.run(["sudo","systemctl","stop","icecast2"], check=True)
     subprocess.run(["killall","ices2"])
     return "Icecast2 server stopped"
 
-def restart_icecast2_broadcast():
+def restart_stream():
     subprocess.run(["sudo","systemctl","restart","icecast2"],check=True)
     subprocess.run(["killall","ices2"])
     subprocess.run(["ices2","/etc/ices2.xml"], check=True)
     return "Icecast2 server has been restarted"
 
-def get_icecast2_service_status():
+def get_status_stream():
     try:
         result = subprocess.run(["sudo","systemctl","status","icecast2.service"],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -91,27 +70,25 @@ def add_song_to_stream(sms_command):
      subprocess.run(["./download_audio.sh", youtube_song_url],check=True)
      return f"Song added to playlist. Please restart the stream with 'restart_stream'!"
 
-def stream_skip_current_song():
+def skip_current_song_stream():
     subprocess.run(["sudo","killall","-HUP","ices2"],check=True)
     return "Skipping current song... Just wait a second."
 
-def get_current_icecast2_song():
+def get_current_song_stream():
     current_song = get_current_playing_song()
     print(f"Now playing: {current_song}")
 
+def get_info_commands_stream():
+    return (f"Here are the available commands: {commands}\n"
+           f"In addition you can use 'add_song_to_stream your-youtube-video-url-here' to add songs to the stream")
 if __name__ == "__main__":
-    # Run Flask app in a separate thread
-    flask_thread = threading.Thread(target=run_flask_app)
-    flask_thread.daemon = True  # Allows the thread to exit when the main program exits
-    flask_thread.start()
-    time.sleep(1)
-    # Command-line input loop
-    while True:     
+    print(f"Welcome to Miros internetradio command line tool! use the command 'info_commands_stream' to see available commands! Quit with CTRL + C")
+    while True:
         action = input("Enter command: ")
-        sys.stdout.flush()       
+        sys.stdout.flush()
    # Ensure the input prompt is printed immediately
-        if action in ["begin_stream", "end_stream", "status_stream", "info_commands_stream","restart_stream","current_song_stream","skip_current_song_stream"]:
-            response = control_broadcast_with_sms(action)
+        if action in commands:
+            response = control_broadcast(action)
             print(response)
         elif 'add_song_to_stream' in action:
             response = add_song_to_stream(action)
@@ -120,6 +97,3 @@ if __name__ == "__main__":
             print("Invalid input. Please try again")
 
         time.sleep(1)
-
-    # Optional: Join the flask thread to clean up after quitting
-    flask_thread.join()

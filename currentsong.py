@@ -39,4 +39,4 @@ def remove_path_and_filename_from_song(full_path_to_song):
     return full_path_to_song #Return original string if pattern doesn't match
 
 # Usage
-print(get_current_playing_song())
+#print(get_current_playing_song())

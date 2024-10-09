@@ -50,7 +50,7 @@ if [ $? -eq 0 ]; then
 			OGG_FILE="${LATEST_MP3%.mp3}.ogg"
 
 			#Convert MP3 to OGG
-			ffmpeg -i "$LATEST_MP3" -c:a libvorbis -q:a 4 "$OGG_FILE"
+			ffmpeg -v verbose -i "$LATEST_MP3" -c:a libvorbis -q:a 4 "$OGG_FILE"
 			echo "Converting MP3 to OGG."
 
 			if [ $? -eq 0 ]; then

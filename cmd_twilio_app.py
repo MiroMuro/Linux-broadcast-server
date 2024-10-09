@@ -89,7 +89,7 @@ def add_song_to_stream(sms_command):
      split_command = sms_command.split()
      youtube_song_url = split_command[1]
      subprocess.run(["./download_audio.sh", youtube_song_url],check=True)
-     return f("Song added to playlist. Please restart the stream with 'stream_restart'! ")
+     return f"Song added to playlist. Please restart the stream with 'restart_stream'!"
 
 def stream_skip_current_song():
     subprocess.run(["sudo","killall","-HUP","ices2"],check=True)
@@ -110,7 +110,7 @@ if __name__ == "__main__":
         action = input("Enter command: ")
         sys.stdout.flush()       
    # Ensure the input prompt is printed immediately
-        if action in ["begin_stream", "end_stream", "status_stream", "info_commands_stream","stream_restart","stream_current_song","stream_skip_song"]:
+        if action in ["begin_stream", "end_stream", "status_stream", "info_commands_stream","restart_stream","current_song_stream","skip_current_song_stream"]:
             response = control_broadcast_with_sms(action)
             print(response)
         elif 'add_song_to_stream' in action:

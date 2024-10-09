@@ -1,4 +1,5 @@
 .env
 venv
+.playlist.txt
 /music/*
 !/music/.gitkeep

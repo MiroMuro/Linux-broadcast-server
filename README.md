@@ -144,30 +144,36 @@ FLASK_SECRET_KEY=your_flask_secret_key
    ```
    yt-dlp --version
    ```
+## ffmpeg
+1. Install ffmpeg video and audio convertion software
+   ```
+   sudo apt install ffmpeg
+   ```
 ## Usage
-1. Add .ogg audio files to /music
-2. copy their full path to playlist.txt 
+## Twilio app
+1. Activate the venv in the projects root folder
+```
+source venv/bin/activate
+```
+2. Run the app as Sudo with the venv's python
+```
+sudo ./venv/bin/python twilio_app.py
+```
+The Icecast2 server will run on default port 8000 and the Flask app for twilio will run on port 5000 as default.
+3. Open up another WSL2-instance and activate the previously installed ngrok on port 5000
+```
+ngrok http 5000
+```
+4. Grab the ngrok-generated ip address
+![kuva](https://github.com/user-attachments/assets/a8f89d77-dc4e-4263-b4e2-a2530fb52910)
+5. Add the ngrok-generated ip address to your phone that you got from twilio. This can be done on twilios website after logging in. Dont forget to the /sms endpoint at the end.
+![kuva](https://github.com/user-attachments/assets/73841508-03a7-4c31-9997-64fed4081d49)
+6. The app is running! Text your twilio phone number "info_commands_stream" to get the available commands.
+![Screenshot_20241009-161643](https://github.com/user-attachments/assets/d7062f8b-3efe-46af-a72c-f0d25e1e086d)
+7. After texting "begin_stream" the sites shows up at http://your-wsl2-ip-address:8000
+![kuva](https://github.com/user-attachments/assets/0c883991-4293-411f-aad7-8360c676dca0)
 
-3. Start your Icecast2 server:
-   ```
-   sudo service icecast2 start
-   ```
-
-4. Run the Ices2 source client:
-   ```
-   ices2 /etc/ices2.xml
-   ```
-
-3. Start the Flask application:
-   ```
-   sudo ./venv/bin/python ./twilio_app_py
-   ```
-
-4. Start ngrok to expose your local server:
-   ```
-   ngrok http 5000
-   ```
-
+## Command line app
 
 ## Contact
 
